@@ -27,16 +27,11 @@ struct Args {
   size_t tests;
   size_t seed;
   size_t result;
-  std::exception_ptr eptr;
 };
 
 void * threadFunc(void * arg) {
   Args * args = static_cast< Args * >(arg);
-  try {
-    args->result = calc(args->r, args->tests, args->seed);
-  } catch (...) {
-    args->eptr = std::current_exception();
-  }
+  args->result = calc(args->r, args->tests, args->seed);
   return nullptr;
 }
 
@@ -78,7 +73,6 @@ double area(double r, size_t threads, size_t tests)
     args[i].tests = my_tests;
     args[i].seed = 12345 + i;
     args[i].result = 0;
-    args[i].eptr = nullptr;
     int err = pthread_create(&tids[i], nullptr, threadFunc, &args[i]);
     if (err != 0) {
       throw std::runtime_error(std::strerror(err));
@@ -91,16 +85,11 @@ double area(double r, size_t threads, size_t tests)
       throw std::runtime_error(std::strerror(err));
     }
   }
-  for (size_t i = 0; i < threads; ++i) {
-    if (args[i].eptr) {
-      std::rethrow_exception(args[i].eptr);
-    }
-  }
   size_t pass = 0;
   for (size_t i = 0; i < threads; ++i) {
     pass += args[i].result;
   }
-  return static_cast< double >(pass) / static_cast< double >(tests) * 4.0 * r * r;
+  return 4.0 * r * r * pass / tests;
 }
 
 int main() {
